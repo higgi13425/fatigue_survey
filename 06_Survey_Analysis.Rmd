@@ -1,0 +1,359 @@
+---
+title: "Fatigue Analysis"
+output: 
+  html_notebook:
+   themes: paper
+   toc: yes
+   toc_float: yes
+editor_options: 
+  chunk_output_type: inline
+---
+
+# Packages 
+```{r}
+library(tidyverse)
+library(gtsummary)
+library(ggplot2)
+library(broom) 
+library(performance)
+library(glmtoolbox)
+library(DescTools)
+library(here)
+library(corrplot)
+library(broom)
+library(pROC)
+library(expss)
+```
+
+# Upload data 
+```{r}
+load("~/data_space/shared_projects/fatigue_survey/cd_final.rda") 
+load("~/data_space/shared_projects/fatigue_survey/uc_final.rda") 
+```
+
+# Join Data 
+```{r}
+rbind(cd_final, uc_final) -> ibd_all
+
+save(ibd_all, file = "~/data_space/shared_projects/fatigue_survey/ibd_all.rda")
+```
+
+# Filter small numbers 
+```{r}
+ibd_all %>% filter(gender != "Other") %>% 
+            filter(gender != "Diclose") -> ibd_pts 
+```
+
+# Labels 
+```{r}
+ibd_pts = apply_labels(ibd_pts,
+                      sbj_id = "Subject ID",
+                      ibd_dx = "IBD Diagnosis",
+                      age = "Age",
+                      gender = "Sex",
+                      race_6 = "Race",
+                      ethnicity = "Ethnicity",
+                      severe_dx = "Moderate-to-Severe IBD",
+                      active_steroids = "Active Corticosteroid Use",
+                      prednisone_last_year = "Prednisone in the Last year",
+                      steroid_months_yr = "Total Months of Steroids in the Last Year",
+                      steroid_month_life = "Total Months of Steroids in Lifetime",
+                      meds_class = "IBD Medications",
+                      anxiety = "Self-Reported Anxiety Diagnosis",
+                      depression = "Self-Reported Depression Diagnosis",
+                      osa = "Obstructive Sleep Apnea",
+                      pro_fatigue = "Fatigue PRO Score",
+                      facit_total = "FACIT-F Score",
+                      facit_fatigue = "FACIT-F < 30",
+                      ibd_f_total = "IBD-F Score",
+                      stop_bang_total = "STOPBANG Score",
+                      osa_mod_high = "Intermediate to High Risk for OSA",
+                      osa_high = "High Risk of OSA")
+```
+
+
+# Demographics 
+```{r}
+ibd_pts %>% dplyr::select(ibd_dx, age, gender, race_6, ethnicity, severe_dx, active_steroids, prednisone_last_year, steroid_months_yr, steroid_month_life, meds_class, anxiety, depression, osa, pro_fatigue, facit_total, facit_fatigue, ibd_f_total, stop_bang_total, osa_mod_high, osa_high) -> ibd_demo 
+
+ibd_demo$severe_dx <- as.numeric(ibd_demo$severe_dx)
+ibd_demo$osa_mod_high <- as.numeric(ibd_demo$osa_mod_high)
+ibd_demo$osa_high <- as.numeric(ibd_demo$osa_high)
+ibd_demo$facit_fatigue <- as.numeric(ibd_demo$facit_fatigue)
+ibd_demo$steroid_months_yr <- as.numeric(ibd_demo$steroid_months_yr)
+ibd_demo$steroids_month_life <- as.numeric(ibd_demo$steroid_month_life)
+
+na.omit(ibd_demo) -> ibd_demo_all
+ibd_demo_all %>% tbl_summary(
+        statistic = list(all_continuous() ~ "{mean} ({sd})"),
+        type = list(steroid_months_yr ~ "continuous"),
+        missing_text = "(Missing)")
+```
+
+# Look at subgroups based on risk stratification  
+```{r}
+# high risk 
+ibd_demo_all %>% filter(osa_high != "0") %>% 
+  dplyr::select(ibd_dx, age, gender, race_6, ethnicity, severe_dx, active_steroids, steroid_months_yr, steroid_month_life, meds_class, anxiety, depression, osa, pro_fatigue, facit_total, facit_fatigue, ibd_f_total, stop_bang_total, osa_mod_high, osa_high) -> osa_high_risk 
+osa_high_risk %>% tbl_summary(
+        statistic = list(all_continuous() ~ "{mean} ({sd})"),
+        missing_text = "(Missing)")
+
+# moderate-high risk
+ibd_demo_all$mod_osa <- 0; ibd_demo_all[ibd_demo_all$stop_bang_total > 2 & ibd_demo_all$stop_bang_total < 5, "mod_osa"] <- 1
+
+ibd_demo_all %>% filter(mod_osa != "0") %>% 
+  dplyr::select(ibd_dx, age, gender, race_6, ethnicity, severe_dx, active_steroids, steroid_months_yr, steroid_month_life, meds_class, anxiety, depression, osa, pro_fatigue, facit_total, facit_fatigue, ibd_f_total, stop_bang_total, osa_mod_high, osa_high) -> osa_mod_high_risk 
+osa_mod_high_risk %>% tbl_summary(
+        statistic = list(all_continuous() ~ "{mean} ({sd})"),
+        missing_text = "(Missing)")
+
+## Look at what proportion of these people actually got sleep studies 
+
+# low risk 
+ibd_demo_all %>% filter(osa_mod_high != "1") %>% 
+  dplyr::select(ibd_dx, age, gender, race_6, ethnicity, severe_dx, active_steroids, steroid_months_yr, steroid_month_life, meds_class, anxiety, depression, osa, pro_fatigue, facit_total, facit_fatigue, ibd_f_total, stop_bang_total, osa_mod_high, osa_high) -> osa_low_risk
+osa_low_risk %>% tbl_summary(
+        statistic = list(all_continuous() ~ "{mean} ({sd})"),
+        missing_text = "(Missing)")
+
+```
+
+
+# Intermediate-High OSA Risk 
+## Univariate Analysis 
+```{r}
+
+ibd_demo_all$osa_mod_high <- as.numeric(ibd_demo_all$osa_mod_high)
+
+ibd_demo_all %>% 
+  tbl_uvregression(
+    method = glm,
+    y = osa_mod_high,
+    include = c(ibd_dx, age, gender, severe_dx, active_steroids, prednisone_last_year, steroid_months_yr, steroid_month_life, meds_class, anxiety, depression, pro_fatigue, facit_fatigue, ibd_f_total),
+    method.args = list(family = binomial),
+    type = list(steroid_months_yr ~ "continuous"),
+    exponentiate = TRUE,
+  ) 
+
+
+ibd_demo_all$osa_high <- as.numeric(ibd_demo_all$osa_high)
+
+ibd_demo_all %>% 
+  tbl_uvregression(
+    method = glm,
+    y = osa_high,
+    include = c(ibd_dx, age, gender, severe_dx, active_steroids,prednisone_last_year, steroid_months_yr, steroid_month_life, meds_class, anxiety, depression, pro_fatigue, facit_fatigue, ibd_f_total),
+    method.args = list(family = binomial),
+    type = list(steroid_months_yr ~ "continuous"),
+    exponentiate = TRUE,
+  ) 
+
+```
+
+
+## Multivariable Analysis 
+```{r}
+ibd_demo_all$osa_mod_high <- as.numeric(ibd_demo_all$osa_mod_high)
+osa_risk <- glm(osa_mod_high ~ age + gender + severe_dx  + active_steroids,
+              family = "binomial", 
+              data = ibd_demo_all)
+
+
+summary(osa_risk )
+broom::glance(osa_risk )
+broom::tidy(osa_risk , exponentiate = TRUE)
+tbl_regression(osa_risk, exponentiate = TRUE)
+
+# C-Statistic/AUROC 
+Cstat(osa_risk)
+
+# Model performance 
+model_performance(osa_risk)
+performance::check_model(osa_risk)
+
+
+```
+
+
+# Intermediate-High Risk with NO OSA DX 
+## Demographics 
+```{r}
+ibd_demo_all$osa_mod_high <- as.numeric(ibd_demo_all$osa_mod_high )
+ibd_demo_all$mod_osa_no_dx <- 0; ibd_demo_all[ibd_demo_all$osa_mod_high >= 1 & ibd_demo_all$osa < 1, "mod_osa_no_dx"] <- 1
+
+ibd_demo_all$mod_osa_no_dx <- as.numeric(ibd_demo_all$mod_osa_no_dx)
+
+# Demographics 
+ibd_demo_all %>% filter(mod_osa_no_dx != "0") %>% 
+  dplyr::select(ibd_dx, age, gender, race_6, ethnicity, severe_dx, active_steroids, steroid_months_yr, steroid_month_life, meds_class, anxiety, depression, osa, pro_fatigue, facit_total, facit_fatigue, ibd_f_total, stop_bang_total) -> osa_mod_high_risk 
+osa_mod_high_risk %>% tbl_summary(
+        statistic = list(all_continuous() ~ "{mean} ({sd})"),
+        missing_text = "(Missing)")
+```
+
+## Univeriate Analysis 
+```{r}
+# Univariate analysis 
+ibd_demo_all %>% 
+  tbl_uvregression(
+    method = glm,
+    y = mod_osa_no_dx,
+    include = c(ibd_dx, age, gender, severe_dx, active_steroids, prednisone_last_year, steroid_months_yr, steroid_month_life, meds_class, anxiety, depression, pro_fatigue, facit_fatigue, ibd_f_total),
+    method.args = list(family = binomial),
+    exponentiate = TRUE,
+  ) 
+```
+
+## Multviariable analysis 
+```{r}
+osa_no_dx <- glm(mod_osa_no_dx ~ age + gender + severe_dx  + active_steroids,
+              family = "binomial", 
+              data = ibd_demo_all)
+
+
+summary(osa_no_dx )
+broom::glance(osa_no_dx )
+broom::tidy(osa_no_dx , exponentiate = TRUE)
+tbl_regression(osa_no_dx, exponentiate = TRUE)
+
+# C-Statistic/AUROC 
+Cstat(osa_no_dx)
+
+# Model performance 
+model_performance(osa_no_dx)
+performance::check_model(osa_no_dx)
+
+```
+
+severe_dx	
+    0	11 (20%)
+    1	45 (80%)
+    
+severe_dx	
+    0	44 
+    1	110 
+    
+# Chi squared tests 
+## IBD Severity 
+```{r}
+
+    
+
+matrix(data = c(45, 11, 110, 44), nrow = 2, ncol = 2, byrow = TRUE) -> severity_matrix
+
+chisq.test(severity_matrix, correct=FALSE) 
+    
+
+```
+
+facit_fatigue	
+    0	9 (16%)
+    1	47 (84%)
+    
+facit_fatigue	
+    0	50 (24%)
+    1	160 (76%)
+    
+## FACIT-F 
+```{r}
+
+matrix(data = c(9, 47, 41, 113), nrow = 2, ncol = 2, byrow = TRUE) -> fatigue_matrix
+
+chisq.test(fatigue_matrix, correct=FALSE) 
+
+```
+
+## Depression 
+```{r}
+
+```
+
+
+Predicting Fatigue with PRO_fatigue 
+____________________________________________________________________
+# IBD_F 
+```{r}
+print(IQR(ibd_demo_all$ibd_f_total))
+res<-quantile(ibd_demo_all$ibd_f_total, probs = c(0,0.25,0.5,0.75,1))
+print(res)
+# 12 seems to be a reasonable cut off for significant fatigue 
+```
+
+# Make variable for clinically significant fatigue based on IBD-F
+```{r}
+ibd_demo_all %>% 
+mutate(ibd_f_fatigue = case_when(ibd_f_total >= 12 ~ '1', TRUE ~ "0")) ->ibd_demo_all
+```
+
+# Correlations
+```{r}
+correlation1 <- cor(ibd_demo_all$facit_total, ibd_demo_all$ibd_f_total, method = 'pearson')
+correlation1
+
+correlation2 <- cor(ibd_demo_all$facit_total, ibd_demo_all$pro_fatigue, method = 'pearson')
+correlation2
+
+correlation3 <- cor(ibd_demo_all$ibd_f_total, ibd_demo_all$pro_fatigue, method = 'pearson')
+correlation3
+
+correlation4 <- cor(ibd_demo_all$facit_fatigue, ibd_demo_all$pro_fatigue, method = 'pearson')
+correlation4
+
+correlation5 <- cor(ibd_demo_all$ibd_f_total, ibd_demo_all$pro_fatigue, method = 'pearson')
+correlation5
+
+```
+
+# Pro_fatigue and FACIT-F 
+```{r}
+
+roc_facit_f <- roc(ibd_demo_all$facit_fatigue, ibd_demo_all$pro_fatigue)
+roc_facit_f
+coords(roc_facit_f)
+plot.roc(roc_facit_f)
+coords(roc_facit_f, "best", ret=c("threshold", "sens", "spec", "ppv", "npv"))
+coords(roc_facit_f, "local maximas", ret=c("threshold", "sens", "spec", "ppv", "npv"))
+
+ci(roc_facit_f, of = "thresholds", thresholds = 1)
+ci(roc_facit_f, of = "thresholds", thresholds = 2)
+ci(roc_facit_f, of = "thresholds", thresholds = 3)
+
+roc_facit_f_plot <- plot.roc(ibd_demo_all$facit_fatigue, ibd_demo_all$pro_fatigue,
+                   main = "ROC Curve for Predicting Significant Fatigue", 
+                   percent=TRUE,
+                   ci = TRUE,                  # compute AUC (of AUC by default)
+                   print.auc = TRUE)           # print the AUC (will contain the CI)
+ciobj <- ci.se(roc_facit_f_plot,                         # CI of sensitivity
+               specificities = seq(0, 100, 5)) # over a select set of specificities
+plot(ciobj, type = "shape", col = "#1c61b6AA")     # plot as a blue shape
+plot(ci(roc_facit_f_plot, of = "thresholds", thresholds = "best")) # add one threshold
+
+```
+
+# PRO-fatigue and IBD-F 
+```{r}
+roc_ibd_f <- roc(ibd_demo_all$ibd_f_fatigue, ibd_demo_all$pro_fatigue)
+roc_ibd_f
+coords(roc_ibd_f)
+plot.roc(roc_ibd_f)
+coords(roc_ibd_f, "best", ret=c("threshold", "sens", "spec", "ppv", "npv"))
+coords(roc_ibd_f, "local maximas", ret=c("threshold", "sens", "spec", "ppv", "npv"))
+
+ci(roc_ibd_f, of = "thresholds", thresholds = 1)
+ci(roc_ibd_f, of = "thresholds", thresholds = 2)
+ci(roc_ibd_f, of = "thresholds", thresholds = 3)
+
+roc_ibd_f_plot <- plot.roc(ibd_demo_all$ibd_f_fatigue, ibd_demo_all$pro_fatigue,
+                   main = "ROC Curve for Predicting Significant Fatigue", 
+                   percent=TRUE,
+                   ci = TRUE,                  # compute AUC (of AUC by default)
+                   print.auc = TRUE)           # print the AUC (will contain the CI)
+ciobj <- ci.se(roc_facit_f_plot,                         # CI of sensitivity
+               specificities = seq(0, 100, 5)) # over a select set of specificities
+plot(ciobj, type = "shape", col = "#1c61b6AA")     # plot as a blue shape
+plot(ci(roc_facit_f_plot, of = "thresholds", thresholds = "best")) # add one threshold
+```
+
+
+

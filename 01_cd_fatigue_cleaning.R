@@ -1,32 +1,18 @@
-### Note - better to restart R Session - Ctrl/Cmd + Shift + F10 - instead
 #Clear existing data and graphics
 rm(list=ls())
 graphics.off()
-
-#Load libraries
-### would consider using {here} package for nicer paths
+#Load Hmisc library
 library(Hmisc)
 library(tidyverse)
 library(janitor)
 library(naniar)
-
 #Read Data
-### this is OK, but R standard practice is to use a directional arrow
 data=read.csv('MeasuringFatigueInIn-CDData111024_DATA_2024-11-11_0859.csv')
-
 #Setting Labels
-### Note - labelled package may be easier to use for this purpose
-### setting Variable labels
-
-### Note that a lot of variable names are long and icky and hard to read (variable like white at the end)
-### often variable labels are terribly long
-### probably worth renaming these with purrr:set_names or rename
-### some variables (i.e. race__N) would be better coalesced into a single variable
 
 label(data$sbj_id)="Subject ID"
 label(data$cd_gender)="What is your gender?"
 label(data$cd_age)="What is your age?"
-
 label(data$cd_race___1)="What is your race? Choose all that apply.  (choice=American Indian or Alaska Native)"
 label(data$cd_race___2)="What is your race? Choose all that apply.  (choice=Asian)"
 label(data$cd_race___3)="What is your race? Choose all that apply.  (choice=Black or African American)"
@@ -34,24 +20,19 @@ label(data$cd_race___4)="What is your race? Choose all that apply.  (choice=Nati
 label(data$cd_race___5)="What is your race? Choose all that apply.  (choice=Unknown)"
 label(data$cd_race___6)="What is your race? Choose all that apply.  (choice=White)"
 label(data$cd_race___7)="What is your race? Choose all that apply.  (choice=Other)"
-
 label(data$cd_ethnicity)="What is your ethnicity?"
 label(data$cd_ibd_type)="Which type of inflammatory bowel disease do you have?"
-label(data$cd_complications___0)="Do you have any of the following complications from your Crohns disease or ulcerative colitis? (choice=none of the above)"
 label(data$cd_complications___1)="Do you have any of the following complications from your Crohns disease or ulcerative colitis? (choice=fistulas)"
 label(data$cd_complications___2)="Do you have any of the following complications from your Crohns disease or ulcerative colitis? (choice=strictures)"
 label(data$cd_complications___3)="Do you have any of the following complications from your Crohns disease or ulcerative colitis? (choice=abscess)"
+label(data$cd_complications___0)="Do you have any of the following complications from your Crohns disease or ulcerative colitis? (choice=none of the above)"
 label(data$cd_complications___4)="Do you have any of the following complications from your Crohns disease or ulcerative colitis? (choice=not sure)"
-
 label(data$cd_extent___1)="What is the extent of your disease? (choice=colon involvement)"
 label(data$cd_extent___2)="What is the extent of your disease? (choice=small bowel involvement)"
 label(data$cd_extent___3)="What is the extent of your disease? (choice=upper gastrointestinal involvement (such as the esophagus, stomach, and duodenum))"
 label(data$cd_extent___4)="What is the extent of your disease? (choice=not sure)"
-
 label(data$cd_surgery)="Have you ever had surgery for IBD? "
 label(data$cd_hospital)="Have you ever been hospitalized for IBD? "
-
-label(data$cd_meds_current___0)="Which of the following medications are you currently taking to treat your inflammatory bowel disease? (choice=none)"
 label(data$cd_meds_current___1)="Which of the following medications are you currently taking to treat your inflammatory bowel disease? (choice=steroids, such as prednisone or budesonide)"
 label(data$cd_meds_current___2)="Which of the following medications are you currently taking to treat your inflammatory bowel disease? (choice=5-aminosalicylate or mesalamine (Apriso, Asacol, Delzicol, Lialda, Sulfasalazine))"
 label(data$cd_meds_current___3)="Which of the following medications are you currently taking to treat your inflammatory bowel disease? (choice=methotrexate)"
@@ -68,9 +49,8 @@ label(data$cd_meds_current___13)="Which of the following medications are you cur
 label(data$cd_meds_current___14)="Which of the following medications are you currently taking to treat your inflammatory bowel disease? (choice=ozanimod (Zeposia))"
 label(data$cd_meds_current___15)="Which of the following medications are you currently taking to treat your inflammatory bowel disease? (choice=tofacitinib (Xeljanz))"
 label(data$cd_meds_current___16)="Which of the following medications are you currently taking to treat your inflammatory bowel disease? (choice=upadacitinib (Rinvoq))"
+label(data$cd_meds_current___0)="Which of the following medications are you currently taking to treat your inflammatory bowel disease? (choice=none)"
 label(data$cd_meds_current___17)="Which of the following medications are you currently taking to treat your inflammatory bowel disease? (choice=not sure)"
-
-label(data$cd_meds_prior___0)="Which of the following medications have you tried to treat your inflammatory bowel disease? (choice=none)"
 label(data$cd_meds_prior___1)="Which of the following medications have you tried to treat your inflammatory bowel disease? (choice=steroids, such as prednisone or budesonide)"
 label(data$cd_meds_prior___2)="Which of the following medications have you tried to treat your inflammatory bowel disease? (choice=5-aminosalicylate or mesalamine (Apriso, Asacol, Delzicol, Lialda, Sulfasalazine))"
 label(data$cd_meds_prior___3)="Which of the following medications have you tried to treat your inflammatory bowel disease? (choice=methotrexate)"
@@ -87,12 +67,11 @@ label(data$cd_meds_prior___13)="Which of the following medications have you trie
 label(data$cd_meds_prior___14)="Which of the following medications have you tried to treat your inflammatory bowel disease? (choice=ozanimod (Zeposia))"
 label(data$cd_meds_prior___15)="Which of the following medications have you tried to treat your inflammatory bowel disease? (choice=tofacitinib (Xeljanz))"
 label(data$cd_meds_prior___16)="Which of the following medications have you tried to treat your inflammatory bowel disease? (choice=upadacitinib (Rinvoq))"
+label(data$cd_meds_prior___0)="Which of the following medications have you tried to treat your inflammatory bowel disease? (choice=none)"
 label(data$cd_meds_prior___17)="Which of the following medications have you tried to treat your inflammatory bowel disease? (choice=not sure)"
-
 label(data$cd_prednisone)="Have you been on PREDNISONE for an IBD flare in the last year? "
 label(data$cd_steroid_months_yr)="How many months (to your best knowledge) have you taken STEROIDS in the past year, to the closest number of months (put zero if none), from 0-12?"
 label(data$cd_steroid_month_life)="How many months (to your best knowledge) have you taken STEROIDS in your life for UC or CD, to the closest number of months (put zero if none), from 0-360. "
-
 label(data$cd_heart_liver_brain___1)="Have you ever been told by a physician that you have any of the following heart, liver, or brain conditions?  If yes, please check all that apply. Otherwise, select no or not sure. (choice=Type 1 Diabetes)"
 label(data$cd_heart_liver_brain___2)="Have you ever been told by a physician that you have any of the following heart, liver, or brain conditions?  If yes, please check all that apply. Otherwise, select no or not sure. (choice=Type 2 Diabetes)"
 label(data$cd_heart_liver_brain___3)="Have you ever been told by a physician that you have any of the following heart, liver, or brain conditions?  If yes, please check all that apply. Otherwise, select no or not sure. (choice=High blood pressure)"
@@ -109,14 +88,12 @@ label(data$cd_heart_liver_brain___13)="Have you ever been told by a physician th
 label(data$cd_heart_liver_brain___14)="Have you ever been told by a physician that you have any of the following heart, liver, or brain conditions?  If yes, please check all that apply. Otherwise, select no or not sure. (choice=Depression)"
 label(data$cd_heart_liver_brain___0)="Have you ever been told by a physician that you have any of the following heart, liver, or brain conditions?  If yes, please check all that apply. Otherwise, select no or not sure. (choice=No)"
 label(data$cd_heart_liver_brain___15)="Have you ever been told by a physician that you have any of the following heart, liver, or brain conditions?  If yes, please check all that apply. Otherwise, select no or not sure. (choice=Not sure)"
-
 label(data$cd_pulmonary___1)="Have you ever been told by a physician that you have any of the following lung or breathing problems? If yes, please check all that apply. Otherwise, select no or not sure. (choice=Asthma)"
 label(data$cd_pulmonary___2)="Have you ever been told by a physician that you have any of the following lung or breathing problems? If yes, please check all that apply. Otherwise, select no or not sure. (choice=Obstructive pulmonary disease)"
 label(data$cd_pulmonary___3)="Have you ever been told by a physician that you have any of the following lung or breathing problems? If yes, please check all that apply. Otherwise, select no or not sure. (choice=Tuberculosis)"
 label(data$cd_pulmonary___4)="Have you ever been told by a physician that you have any of the following lung or breathing problems? If yes, please check all that apply. Otherwise, select no or not sure. (choice=Obstructive sleep apnea)"
 label(data$cd_pulmonary___0)="Have you ever been told by a physician that you have any of the following lung or breathing problems? If yes, please check all that apply. Otherwise, select no or not sure. (choice=No)"
 label(data$cd_pulmonary___5)="Have you ever been told by a physician that you have any of the following lung or breathing problems? If yes, please check all that apply. Otherwise, select no or not sure. (choice=Not sure)"
-
 label(data$cd_digestive_skin___1)="Have you ever been told by a physician that you have any of the following digestive or skin conditions?  If yes, please check all that apply. Otherwise, select no or not sure. (choice=Celiac disease)"
 label(data$cd_digestive_skin___2)="Have you ever been told by a physician that you have any of the following digestive or skin conditions?  If yes, please check all that apply. Otherwise, select no or not sure. (choice=Irritable Bowel Syndrome (IBS))"
 label(data$cd_digestive_skin___3)="Have you ever been told by a physician that you have any of the following digestive or skin conditions?  If yes, please check all that apply. Otherwise, select no or not sure. (choice=Lupus)"
@@ -130,11 +107,9 @@ label(data$cd_digestive_skin___10)="Have you ever been told by a physician that 
 label(data$cd_digestive_skin___11)="Have you ever been told by a physician that you have any of the following digestive or skin conditions?  If yes, please check all that apply. Otherwise, select no or not sure. (choice=Shingles)"
 label(data$cd_digestive_skin___0)="Have you ever been told by a physician that you have any of the following digestive or skin conditions?  If yes, please check all that apply. Otherwise, select no or not sure. (choice=No)"
 label(data$cd_digestive_skin___12)="Have you ever been told by a physician that you have any of the following digestive or skin conditions?  If yes, please check all that apply. Otherwise, select no or not sure. (choice=Not sure)"
-
 label(data$cd_cancer)="Have you ever been diagnosed with cancer other than non-melanoma skin cancer (basal cell carcinoma or squamous cell carcinoma of the skin)? "
 label(data$cd_cancer_type)="Which type of cancer were you diagnosed with?"
 label(data$cd_cancer_tx)="Are you actively receiving treatment for cancer (e.g., chemotherapy, immunotherapy, or radiation)?"
-
 label(data$cd_facit_q1)="1. I feel fatigued"
 label(data$cd_facit_q2)="2. I feel weak all over"
 label(data$cd_facit_q3)="3. I feel listless (washed out)"
@@ -148,7 +123,6 @@ label(data$cd_facit_q10)="10. I am too tired to eat"
 label(data$cd_facit_q11)="11. I need help doing my usual activities"
 label(data$cd_facit_q12)="12. I am frustrated by being too tired to do the things I want to do"
 label(data$cd_facit_q13)="13. I have to limit my social activity because I am tired"
-
 label(data$cd_pro1)="1.1. In the past 24 hours, how many bowel movements did you have?"
 label(data$cd_pro2)="1.2. In the past 24 hours, how often were your bowel movements mostly or completely liquid?"
 label(data$cd_pro3)="2.1. In the past 24 hours, did you have blood in your bowel movements?"
@@ -200,13 +174,11 @@ label(data$cd_pro48)="5.5. In the past seven days, how often did you feel you ha
 label(data$cd_pro49)="5.6. In the past seven days, how often did you feel angry?"
 label(data$cd_pro50)="5.7. In the past seven days, how often did you feel frustrated?"
 label(data$cd_pro51)="5.8. In the past seven days, how often did you feel depressed?"
-
 label(data$what_is_your_level_of_fati)="1. What is your level of fatigue right NOW"
 label(data$what_was_your_highest_fati)="2. What was your HIGHEST fatigue level in the past two weeks"
 label(data$what_was_your_lowest_fatig)="3. What was your LOWEST fatigue level in the past two weeks"
 label(data$what_was_your_average_fati)="4. What was your AVERAGE fatigue level in the past two weeks"
 label(data$cd_ibdf_5)="5. How much of your waking time have you felt fatigued in the past two weeks "
-
 label(data$cd_stop_bang1)="1. Do you Snore Loudly (loud enough to be heard through closed doors or your bed-partner elbows you for snoring at night)"
 label(data$cd_stop_bang2)="2. Do you often feel Tired, Fatigued, or Sleepy during the daytime (such as falling asleep during driving or talking to someone)?"
 label(data$cd_stop_bang3)="3. Has anyone Observed you Stop Breathing or Choking/Gasping during your sleep ?"
@@ -215,12 +187,9 @@ label(data$cd_stop_bang5)="5. Body Mass Index more than 35 kg/m2?"
 label(data$cd_stop_bang6)="6. Is your age older than 50?"
 label(data$cd_stop_bang7)="7. Neck size.  Is your shirt collar 16 inches / 40cm or larger? (Measured around Adams apple)"
 label(data$cd_stop_bang8)="8. Is your gender male?"
-
 label(data$crohns_disease_fatigue_assessment_complete)="Complete?"
+#Setting Units
 
-### Setting Units/value labels as factors
-### these are generally referred to as value labels - best handled in R
-### as factors as you have done here
 
 #Setting Factors(will create new variable for factors)
 data$cd_gender.factor = factor(data$cd_gender,levels=c("1","2","3","4"))
@@ -592,13 +561,9 @@ data <- data |>
               cd_stop_bang7, cd_stop_bang8, na.rm = TRUE)) |> 
   ungroup()
 
-### check calculations
-### ideally hand-check a few at the extremes
-### none appear out of range
 data |> 
   tabyl(cd_stop_bang_score)
 
-### note cd_pulm4 factor is prior (recalled) dx of OSA if checked
 data |> 
   tabyl(cd_stop_bang_score, cd_pulmonary___4.factor) |> 
   adorn_totals("both") 
@@ -630,13 +595,3 @@ data_sens |>
   tabyl(cd_stop_bang_score, cd_pulmonary___4.factor) |>
   adorn_totals("both")
 
-### visually check some scores
-data_sens %>% 
-  select(cd_stop_bang1:cd_stop_bang8, cd_stop_bang_score) %>% 
-  View()
-
-
-### code checked on 3 Dec 2024 by Peter Higgins
-### all code runs on a different machine without error
-### snapshot of renv updated
-### comments added with ###

@@ -1,10 +1,7 @@
 #Clear existing data and graphics
-### better to restart R
 rm(list=ls())
 graphics.off()
-
 #Load Hmisc library
-### consider here and labelled packages
 library(Hmisc)
 library(tidyverse)
 library(janitor)
@@ -13,7 +10,6 @@ library(naniar)
 #Read Data
 data=read.csv('MeasuringFatigueInIn-UCData111024_DATA_2024-11-11_0630.csv')
 #Setting Labels
-### Setting variable labels
 
 label(data$sbj_id)="Subject ID"
 label(data$uc_gender)="What is your gender?"
@@ -193,9 +189,8 @@ label(data$uc_stop_bang6)="6. Is your age older than 50?"
 label(data$uc_stop_bang7)="7. Neck size.  Is your shirt collar 16 inches / 40cm or larger? (Measured around Adams apple)"
 label(data$uc_stop_bang8)="8. Is your gender male?"
 label(data$ulcerative_colitis_fatigue_assessment_complete)="Complete?"
-
 #Setting Units
-### Setting value labels
+
 
 #Setting Factors(will create new variable for factors)
 data$uc_gender.factor = factor(data$uc_gender,levels=c("1","2","3","4"))
@@ -597,13 +592,5 @@ data_sens |>
   tabyl(uc_stop_bang_score, uc_pulmonary___4.factor) |> 
   adorn_totals("both") 
 
-### visually check some scores
-data_sens %>% 
-  select(uc_stop_bang1:uc_stop_bang8, uc_stop_bang_score) %>% 
-  View()
-
-### code checked on 3 Dec 2024 by Peter Higgins
-### all code runs on a different machine without error
-### snapshot of renv updated
-### comments added with ###
+ 
 
